@@ -1,0 +1,40 @@
+{
+    "$project": {
+        "distance": {
+            "$let": {
+                "vars": {
+                    "pow": {
+                        "$reduce": {
+                            "input": {
+                                "$zip": {
+                                    "inputs": [
+                                        [],
+                                        "$TestArray"
+                                    ]
+                                }
+                            },
+                            "initialValue": "0",
+                            "in": {
+                                "$add": [
+                                    "$$value",
+                                    {
+                                        "$pow": [
+                                            {
+                                                "$subtract": [
+                                                    { "$arrayElemAt": [ "$$this", 0 ] },
+                                                    { "$arrayElemAt": [ "$$this", 1 ] }
+                                                ]
+                                            },
+                                            2
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                },
+                "in": { "$sqrt": "$$pow" }
+            }
+        }
+    }
+}
