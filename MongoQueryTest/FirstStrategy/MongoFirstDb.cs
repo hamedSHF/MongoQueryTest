@@ -3,6 +3,7 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
+using MongoQueryTest.Utils;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections;
@@ -12,22 +13,24 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using static MongoDB.Driver.WriteConcern;
 
 namespace MongoQueryTest
 {
-    public class MongoQueryDb
+    public class MongoFirstDb
     {
         private const string dataBaseName = "TestDb";
         private const string collectionName = "TestCollection";
+        private BsonDocument sortPipeLine;
         private readonly int sizeOfArray;
         private readonly IMongoDatabase database;
-        private IMongoCollection<TestModel> collection;
-        private Random random = new Random();
-        public MongoQueryDb(int sizeOfArray = 12)
+        private IMongoCollection<CommonModel> collection;
+        public MongoFirstDb(int sizeOfArray = 12)
         {
             this.sizeOfArray = sizeOfArray;
             database = MongoConnection.Client.GetDatabase(dataBaseName);
-            collection = database.GetCollection<TestModel>(collectionName);
+            collection = database.GetCollection<CommonModel>(collectionName);
+            sortPipeLine = new BsonDocument("$sort", new BsonDocument("distance", 1));
         }
         public async Task CreateAndFillCollection(string collectionName = collectionName,bool capped = true,int size = 100_000)
         {
@@ -35,13 +38,13 @@ namespace MongoQueryTest
             if(!(await database.ListCollectionNamesAsync()).ToList().Contains(collectionName))
             {
                 await database.CreateCollectionAsync(collectionName,new CreateCollectionOptions { Capped = capped,MaxDocuments = size,MaxSize = int.MaxValue });
-                collection = database.GetCollection<TestModel>(collectionName);
+                collection = database.GetCollection<CommonModel>(collectionName);
                 await insertDocuments(collection, size);
             }
             else
             {
-                collection = database.GetCollection<TestModel>(collectionName);
-                if((await collection.CountDocumentsAsync(FilterDefinition<TestModel>.Empty)) == 0)
+                collection = database.GetCollection<CommonModel>(collectionName);
+                if((await collection.CountDocumentsAsync(FilterDefinition<CommonModel>.Empty)) == 0)
                 {
                     await insertDocuments(collection, size);
                 }
@@ -53,21 +56,11 @@ namespace MongoQueryTest
         /// <param name="number"></param>
         /// <param name="list"></param>
         /// <returns></returns>
-        public async Task ExecuteFirstQuery(int number,List<double> list)
+        public async Task<List<ResultModel>> ExecuteFirstQuery(int number, List<double> list)
         {
-            if(collection != null)
-            {
-                var query = generateMongoQuery(list);
-                var bsonDoc = BsonDocument.Parse(query);
-                try
-                {
-                    var result = collection.Aggregate<Result>(new[] { bsonDoc });
-                }
-                catch(Exception ex)
-                {
-
-                }
-            }
+            var query = generateMongoQuery(list);
+            var bsonDoc = BsonDocument.Parse(query);
+            return await collection.Aggregate<ResultModel>(new[] { bsonDoc, sortPipeLine, new BsonDocument("$limit", number) }).ToListAsync();
         }
         /// <summary>
         /// Return all records which their euclidean distances from target <paramref name="list"/> are less than <paramref name="number"/>
@@ -75,21 +68,24 @@ namespace MongoQueryTest
         /// <param name="number"></param>
         /// <param name="list"></param>
         /// <returns></returns>
-        public async Task ExecuteSecondQuery(int number,List<double> list)
+        public async Task<List<ResultModel>> ExecuteSecondQuery(double number,List<double> list)
         {
-
+            var query = generateMongoQuery(list);
+            var bsonDoc = BsonDocument.Parse(query);
+            return await collection.Aggregate<ResultModel>(new[] { bsonDoc, sortPipeLine,
+                new BsonDocument("$match",new BsonDocument("distance",new BsonDocument("$lt",number))) }).ToListAsync();
         }
         private string generateMongoQuery(List<double> targetList)
         {
-            JObject result = JObject.Parse(File.ReadAllText("FirstQuery.json"));
-            var targetArray = (JArray)result["$project"]["distance"]["$let"]["vars"]["pow"]["$reduce"]["input"]["$zip"]["inputs"][0];
+            JObject result = JObject.Parse(File.ReadAllText("FirstStrategy\\FirstQuery.json"));
+            var targetArray = (JArray)result["$addFields"]["distance"]["$let"]["vars"]["pow"]["$reduce"]["input"]["$zip"]["inputs"][0];
             foreach(var item in targetList)
             {
                 targetArray.Add(item);
             }
             return result.ToString();
         }
-        private async Task insertDocuments(IMongoCollection<TestModel> collection,int size)
+        private async Task insertDocuments(IMongoCollection<CommonModel> collection,int size)
         {
             if (size > 10_000)
             {
@@ -110,26 +106,16 @@ namespace MongoQueryTest
                 await collection.InsertManyAsync(generateData(size));
             }
         }
-        private List<TestModel> generateData(int count)
+        private List<CommonModel> generateData(int count)
         {
-            var finalList = new List<TestModel>(count);
-            for(int i = 0;i < count; i++)
+            var finalList = new List<CommonModel>(count);
+            for (int i = 0; i < count; i++)
             {
-                var testModel = new TestModel();
-                var list = new List<double>(sizeOfArray);
-                for (int j = 0; j < sizeOfArray; j++)
-                {
-                    list.Add(random.NextDouble());
-                }
-                testModel.TestArray = list;
+                var testModel = new CommonModel();
+                testModel.TestArray = Utils.MongoUtils.GenerateArray(sizeOfArray); ;
                 finalList.Add(testModel);
             }
             return finalList;
         }
-    }
-    public class Result
-    {
-        [BsonElement("distance")]
-        public double Distance { get; set; }
     }
 }
