@@ -143,8 +143,6 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="FirstStrategy\ResultModel.cs" />
-    <Compile Include="SecondStartegy\MongoSecondDb.cs" />
-    <Compile Include="SecondStartegy\TestModel.cs" />
     <Compile Include="Common\CommonModel.cs" />
     <Compile Include="Common\MongoUtils.cs" />
   </ItemGroup>

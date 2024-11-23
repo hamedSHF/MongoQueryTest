@@ -1,5 +1,4 @@
 ﻿using MongoDB.Driver;
-using MongoQueryTest.SecondStartegy;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;

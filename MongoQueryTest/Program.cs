@@ -1,5 +1,4 @@
-﻿using MongoQueryTest.SecondStartegy;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -13,14 +12,11 @@ namespace MongoQueryTest
         private static Random random = new Random();
         static async Task Main(string[] args)
         {
-            //MongoFirstDb queryDb = new MongoFirstDb();
-            //await queryDb.CreateAndFillCollection();
+            MongoFirstDb queryDb = new MongoFirstDb();
+            await queryDb.CreateAndFillCollection();
             var list = generateTargetList();
-            //var list1 = await queryDb.ExecuteFirstQuery(10, list);
-            //var list2 = await queryDb.ExecuteSecondQuery(0.5, list);
-            MongoSecondDb secondQuery = new MongoSecondDb();
-            await secondQuery.CreateAndFillCollection();
-            var list3 = await secondQuery.ExecuteFirstQuery(10,list);
+            var list1 = await queryDb.ExecuteFirstQuery(10, list);
+            var list2 = await queryDb.ExecuteSecondQuery(0.5, list);
         }
         private static List<double> generateTargetList()
         {
