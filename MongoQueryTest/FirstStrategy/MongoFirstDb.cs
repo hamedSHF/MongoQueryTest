@@ -72,7 +72,7 @@ namespace MongoQueryTest
         {
             var query = generateMongoQuery(list);
             var bsonDoc = BsonDocument.Parse(query);
-            return await collection.Aggregate<ResultModel>(new[] { bsonDoc
+            return await collection.Aggregate<ResultModel>(new[] { bsonDoc,
                 new BsonDocument("$match",new BsonDocument("distance",new BsonDocument("$lt",number))) }).ToListAsync();
         }
         private string generateMongoQuery(List<double> targetList)
